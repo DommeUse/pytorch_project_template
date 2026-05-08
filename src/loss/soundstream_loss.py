@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 
-class ExampleLoss(nn.Module):
+class SoundStreamLoss(nn.Module):
     """
     Example of a loss function to use.
     """

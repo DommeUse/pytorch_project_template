@@ -1,1 +1,1 @@
-from src.loss.example import ExampleLoss
+from pytorch_project_template.src.loss.soundstream_loss import SoundStreamLoss
