@@ -1,0 +1,107 @@
+import torch.nn as nn
+import torch.nn.functional as F
+
+class CausalConv1d(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride = 1, dilation = 1):
+        super().__init__()
+
+        self.padding_left = (kernel_size - 1) * dilation
+
+        self.conv = nn.Conv1d(
+            in_channels = in_channels,
+            out_channels = out_channels,
+            kernel_size = kernel_size,
+            stride = stride,
+            dilation = dilation
+        )
+
+    def forward(self, x):
+        x = F.pad(x, (self.padding_left, 0))
+        return self.conv(x)
+    
+class CausalConvTranspose1d(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride = 1):
+        super().__init__()
+
+        self.conv = nn.ConvTranspose1d(
+            in_channels = in_channels,
+            out_channels = out_channels,
+            kernel_size = kernel_size,
+            stride = stride
+        )
+
+        self.crop_right = kernel_size - stride
+
+    def forward(self, x):
+        out = self.conv(x)
+        if self.crop_right > 0:
+            out = out[..., :-self.crop_right]
+        return out
+
+class ResidualUnit(nn.Module):
+    def __init__(self, n_channels, dilation):
+        super().__init__()
+
+        self.net = nn.Sequential(
+            CausalConv1d(
+                in_channels = n_channels,
+                out_channels = n_channels,
+                kernel_size = 7,
+                dilation = dilation
+            ),
+            nn.ELU(),
+            CausalConv1d(
+                in_channels = n_channels,
+                out_channels = n_channels,
+                kernel_size = 1
+            )
+        )
+
+    def forward(self, x):
+        return self.net(x) + x
+    
+
+class EncoderBlock(nn.Module):
+    def __init__(self, n_channels, stride):
+        super().__init__()
+        
+        self.net = nn.Sequential(
+            ResidualUnit(n_channels = n_channels // 2, dilation = 1),
+            nn.ELU(),
+            ResidualUnit(n_channels = n_channels // 2, dilation = 3),
+            nn.ELU(),
+            ResidualUnit(n_channels = n_channels // 2, dilation = 9),
+            nn.ELU(),
+            CausalConv1d(
+                in_channels = n_channels // 2, 
+                out_channels = n_channels, 
+                kernel_size = 2 * stride, 
+                stride = stride
+            )
+        )
+    
+    def forward(self, x):
+        return self.net(x)
+
+
+class DecoderBlock(nn.Module):
+    def __init__(self, n_channels, stride):
+        super().__init__()
+
+        self.net = nn.Sequential(
+            CausalConvTranspose1d(
+                in_channels = n_channels, 
+                out_channels = n_channels // 2, 
+                kernel_size = 2 * stride, 
+                stride = stride
+            ),
+            nn.ELU(),
+            ResidualUnit(n_channels = n_channels // 2, dilation = 1),
+            nn.ELU(),
+            ResidualUnit(n_channels = n_channels // 2, dilation = 3),
+            nn.ELU(),
+            ResidualUnit(n_channels = n_channels // 2, dilation = 9),
+        )
+    
+    def forward(self, x):
+        return self.net(x)
