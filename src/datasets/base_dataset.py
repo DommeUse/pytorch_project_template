@@ -3,6 +3,7 @@ import random
 from typing import List
 
 import torch
+import torchaudio
 from torch.utils.data import Dataset
 
 logger = logging.getLogger(__name__)
@@ -55,12 +56,15 @@ class BaseDataset(Dataset):
             instance_data (dict): dict, containing instance
                 (a single dataset element).
         """
-        data_dict = self._index[ind]
-        data_path = data_dict["path"]
-        data_object = self.load_object(data_path)
-        data_label = data_dict["label"]
+        audio_dict = self._index[ind]
+        audio_path = audio_dict["path"]
+        audio = self.load_audio(audio_path)
 
-        instance_data = {"data_object": data_object, "labels": data_label}
+        instance_data = {
+            "audio": audio,
+            "audio_path" : audio_path
+        }
+
         instance_data = self.preprocess_data(instance_data)
 
         return instance_data
@@ -71,17 +75,11 @@ class BaseDataset(Dataset):
         """
         return len(self._index)
 
-    def load_object(self, path):
-        """
-        Load object from disk.
+    def load_audio(self, path):
+        audio_tensor, sr = torchaudio.load(path)
+        audio_tensor = audio_tensor[:1, :]
 
-        Args:
-            path (str): path to the object.
-        Returns:
-            data_object (Tensor):
-        """
-        data_object = torch.load(path)
-        return data_object
+        return audio_tensor
 
     def preprocess_data(self, instance_data):
         """
@@ -142,9 +140,8 @@ class BaseDataset(Dataset):
             assert "path" in entry, (
                 "Each dataset item should include field 'path'" " - path to audio file."
             )
-            assert "label" in entry, (
-                "Each dataset item should include field 'label'"
-                " - object ground-truth label."
+            assert "audio_len" in entry, (
+                "Each dataset item should include field 'audio_len'" " - length of the audio."
             )
 
     @staticmethod
@@ -164,7 +161,7 @@ class BaseDataset(Dataset):
                 of the dataset. The dict has required metadata information,
                 such as label and object path.
         """
-        return sorted(index, key=lambda x: x["KEY_FOR_SORTING"])
+        return sorted(index, key=lambda x: x["audio_len"])
 
     @staticmethod
     def _shuffle_and_limit_index(index, limit, shuffle_index):
