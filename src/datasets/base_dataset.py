@@ -2,6 +2,7 @@ import logging
 import random
 from typing import List
 
+import soundfile as sf
 import torch
 import torchaudio
 from torch.utils.data import Dataset
@@ -76,10 +77,15 @@ class BaseDataset(Dataset):
         return len(self._index)
 
     def load_audio(self, path):
-        audio_tensor, sr = torchaudio.load(path)
-        audio_tensor = audio_tensor[:1, :]
+        audio, sr = sf.read(path)
+        audio_tensor = torch.from_numpy(audio)
 
-        return audio_tensor
+        if audio_tensor.dim() == 1:
+            audio_tensor = audio_tensor.unsqueeze(0)
+        else:
+            audio_tensor = audio_tensor.T
+
+        return audio_tensor[:1, :].float()
 
     def preprocess_data(self, instance_data):
         """
