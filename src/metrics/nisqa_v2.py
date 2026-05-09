@@ -13,7 +13,7 @@ class NISQAMetric(BaseMetric):
         self.metric = NonIntrusiveSpeechQualityAssessment(fs = sample_rate).to(device)
 
     @torch.no_grad()
-    def __call__(self, output):
+    def __call__(self, output, **kwargs):
         if output.dim() == 3:
             output = output.squeeze(1)
 
