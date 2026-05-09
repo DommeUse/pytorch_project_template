@@ -9,14 +9,13 @@ class AudioCutter:
     def __call__(self, audio):
         cur_size = audio.shape[-1]
 
-        if not self.is_train:
-            return audio
-
         if cur_size < self.target_size:
             pad_size = self.target_size - cur_size
-            audio = F.pad(audio, (0, pad_size), mode = 'replicate')
-        else:
+            return F.pad(audio, (0, pad_size), mode = 'replicate')
+        
+        if self.is_train:
             start = torch.randint(0, cur_size - self.target_size + 1, (1,)).item()
-            audio = audio[:, start : start + self.target_size]
+        else:
+            start = (cur_size - self.target_size) // 2
 
-        return audio
+        return audio[:, start : start + self.target_size]
