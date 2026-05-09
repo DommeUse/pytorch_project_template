@@ -1,3 +1,5 @@
+import torch
+
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
 
@@ -37,6 +39,10 @@ class Trainer(BaseTrainer):
         outputs = self.model(**batch)
         batch.update(outputs)
 
+        if "perplexities" in outputs:
+            mean_ppl = torch.stack(outputs["perplexities"]).mean().item()
+            metrics.update("mean_perplexity", mean_ppl)
+
         all_losses = self.criterion(**batch)
         batch.update(all_losses)
 
@@ -69,6 +75,15 @@ class Trainer(BaseTrainer):
         """
         # method to log data from you batch
         # such as audio, text or images, for example
+
+        if self.writer == None:
+            return
+
+        target = batch["audio"][0].detach().cpu()
+        result = batch["output"][0].detach().cpu()
+
+        self.writer.add_audio(f"{mode}/target", target, 16000)
+        self.writer.add_audio(f"{mode}/reconstructed", result, 16000)
 
         # logging scheme might be different for different partitions
         if mode == "train":  # the method is called only every self.log_step steps
