@@ -1,0 +1,13 @@
+librispeech_transform:
+  train:
+    audio:
+      _target_: src.transforms.AudioCutter
+      target_sr: 16000
+      duration: 0.5
+      is_train: True
+  inference:
+    audio:
+      _target_: src.transforms.AudioCutter
+      target_sr: 16000
+      duration: 10.0
+      is_train: False

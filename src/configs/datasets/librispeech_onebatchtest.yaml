@@ -1,6 +1,12 @@
 train:
   _target_: src.datasets.LibriSpeechDataset
-  part: "dev-clean"
-val:
+  part: "test-clean"
+  limit: 32
+  shuffle_index: True
+  instance_transforms: ${transforms.instance_transforms.librispeech_transform.train}
+test:
   _target_: src.datasets.LibriSpeechDataset
-  part: "dev-clean"
+  part: "test-clean"
+  limit: 32
+  shuffle_index: True
+  instance_transforms: ${transforms.instance_transforms.librispeech_transform.train}
