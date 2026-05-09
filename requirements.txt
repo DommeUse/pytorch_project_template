@@ -11,6 +11,9 @@ comet_ml
 hydra-core
 omegaconf
 soundfile
+librosa
+requests
+pystoi
 
 black
 isort
