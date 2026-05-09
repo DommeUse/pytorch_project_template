@@ -17,6 +17,11 @@ class SoundStream(nn.Module):
 
     def forward(self, x):
         z = self.encoder(x)
-        z_hat, _, _, _ = self.rvq(e)
+        z_hat, all_idx, all_commitment, all_ppls = self.rvq(z)
         out = self.decoder(z_hat)
-        return out
+        return {
+            "output" : out, 
+            "indices" : all_idx, 
+            "commitment_loss" : all_commitment,
+            "perplexities" : all_ppls
+        }

@@ -29,10 +29,10 @@ class VectorQuantizer(nn.Module):
         centroids = z_flat[idx].clone()
 
         for i in range(self.k_means_iters):
-            distances = (z_flat ** 2).sum(-1, keepdim = True) - 2 * z_flat @ centroids + (centroids ** 2).sum(-1)
+            distances = (z_flat ** 2).sum(-1, keepdim = True) - 2 * z_flat @ centroids.T + (centroids ** 2).sum(-1)
             nearest = distances.argmin(dim = -1)
 
-            one_hot = torch.nn.functional.one_hot(nearest, self.codebook_size, dtype = torch.long)
+            one_hot = torch.nn.functional.one_hot(nearest, self.codebook_size).type_as(z_flat)
             frequency = one_hot.sum(dim = 0)
             new_centroids = one_hot.T @ z_flat / frequency.unsqueeze(-1).clamp(min = 1)
 
@@ -45,7 +45,7 @@ class VectorQuantizer(nn.Module):
 
     @torch.no_grad()
     def _update_ema(self, z_flat, idx):
-        one_hot = torch.nn.functional.one_hot(idx, self.codebook_size, dtype = torch.long)
+        one_hot = torch.nn.functional.one_hot(idx, self.codebook_size).type_as(z_flat)
         cluster_batch_size = one_hot.sum(dim = 0)
         embedding_batch_sum = one_hot.T @ z_flat
 
@@ -64,7 +64,7 @@ class VectorQuantizer(nn.Module):
         if dead_idx.sum() == 0:
             return
         
-        replace_idx = torch.randint(0, z_flat.shape[0], (dead_idx.sum(),), device = z_flat.device)
+        replace_idx = torch.randint(0, z_flat.shape[0], (int(dead_idx.sum()),), device = z_flat.device)
 
         self.codebook[dead_idx] = z_flat[replace_idx]
         self.cluster_size[dead_idx] = 1
@@ -82,7 +82,7 @@ class VectorQuantizer(nn.Module):
         z_flat = z.permute(0, 2, 1).contiguous().view(-1, D)
 
         if self.training and not self.k_means_inited.item():
-            self.k_means_init(z_flat)
+            self._k_means_init(z_flat)
             self.k_means_inited.fill_(True)
 
         distances = (z_flat ** 2).sum(-1, keepdim = True) - 2 * z_flat @ self.codebook.T + (self.codebook ** 2).sum(-1)
@@ -122,8 +122,8 @@ class ResidualVQ(nn.Module):
         for quantizer in self.quantizers:
             q, idx, commitment, ppl = quantizer(residual)
 
-            z_hat += q
-            residual -= q
+            z_hat = z_hat + q
+            residual = residual - q
 
             all_idx.append(idx)
             all_ppls.append(ppl)

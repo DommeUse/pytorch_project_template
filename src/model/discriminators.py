@@ -1,31 +1,63 @@
+import torch
 import torch.nn as nn
 
 from src.model.blocks import ResidualUnit2d, WaveDiscriminatorBlock
 
 class STFTDiscriminator(nn.Module):
-    def __init__(self, hidden_dim, n_bins):
+    def __init__(self, hidden_dim, n_fft, hop_length, n_bins):
         super().__init__()
 
-        self.net = nn.Sequential(
-            nn.Conv2d(kernel_size = (7, 7), in_channels = 1, out_channels = 32),
-            nn.ELU(),
-            ResidualUnit2d(in_channels = 32, out_channels = hidden_dim, m = 2, s = (1, 2)),
-            nn.ELU(),
-            ResidualUnit2d(in_channels = 2 * hidden_dim, out_channels = 2 * hidden_dim, m = 2, s = (2, 2)),
-            nn.ELU(),
-            ResidualUnit2d(in_channels = 4 * hidden_dim, out_channels = 4 * hidden_dim, m = 1, s = (1, 2)),
-            nn.ELU(),
-            ResidualUnit2d(in_channels = 4 * hidden_dim, out_channels = 4 * hidden_dim, m = 2, s = (2, 2)),
-            nn.ELU(),
-            ResidualUnit2d(in_channels = 8 * hidden_dim, out_channels = 8 * hidden_dim, m = 1, s = (1, 2)),
-            nn.ELU(),
-            ResidualUnit2d(in_channels = 8 * hidden_dim, out_channels = 8 * hidden_dim, m = 2, s = (2, 2)),
-            nn.ELU(),
-            nn.Conv2d(kernel_size = (1, n_bins // 2**6), in_channels = 16 * hidden_dim, out_channels = 1)
-        )
+        self.n_fft = n_fft
+        self.hop_length = hop_length
+
+        self.net = nn.ModuleList([
+            nn.Sequential(
+                nn.Conv2d(kernel_size = (7, 7), in_channels = 1, out_channels = 32, padding = 3),
+                nn.ELU()
+            ),
+            nn.Sequential(
+                ResidualUnit2d(in_channels = 32, out_channels = hidden_dim, m = 2, s = (1, 2)),
+                nn.ELU(),
+            ),
+            nn.Sequential(
+                ResidualUnit2d(in_channels = 2 * hidden_dim, out_channels = 2 * hidden_dim, m = 2, s = (2, 2)),
+                nn.ELU(),
+            ),
+            nn.Sequential(
+                ResidualUnit2d(in_channels = 4 * hidden_dim, out_channels = 4 * hidden_dim, m = 1, s = (1, 2)),
+                nn.ELU(),
+            ),
+            nn.Sequential(
+                ResidualUnit2d(in_channels = 4 * hidden_dim, out_channels = 4 * hidden_dim, m = 2, s = (2, 2)),
+                nn.ELU(),
+            ),
+            nn.Sequential(
+                ResidualUnit2d(in_channels = 8 * hidden_dim, out_channels = 8 * hidden_dim, m = 1, s = (1, 2)),
+                nn.ELU(),
+            ),
+            nn.Sequential(
+                ResidualUnit2d(in_channels = 8 * hidden_dim, out_channels = 8 * hidden_dim, m = 2, s = (2, 2)),
+                nn.ELU(),
+            ),
+            nn.Conv2d(kernel_size = (n_bins // 2**6, 1), in_channels = 16 * hidden_dim, out_channels = 1)
+        ])
 
     def forward(self, x):
-        return self.net(x)
+        spec = torch.stft(
+            x.squeeze(1), 
+            n_fft = self.n_fft,
+            hop_length = self.hop_length,
+            win_length = 1024,
+            return_complex = True
+        )
+
+        spec = spec.abs().unsqueeze(1)
+
+        feature_map = []
+        for i in range(len(self.net)):
+            spec = self.net[i](spec)
+            feature_map.append(spec)
+        return feature_map
 
 class WaveDiscriminator(nn.Module):
     def __init__(self, n_blocks = 4):
