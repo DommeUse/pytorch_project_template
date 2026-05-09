@@ -12,5 +12,9 @@ class STOIMetric(BaseMetric):
         self.metric = ShortTimeObjectiveIntelligibility(fs = sample_rate, extended = False).to(device)
 
     @torch.no_grad()
-    def __call__(self, output, audio):
+    def __call__(self, output, audio, **kwargs):
+        if output.dim() == 3:
+            output = output.squeeze(1)
+        if audio.dim() == 3:
+            audio = audio.squeeze(1)
         return self.metric(output, audio).item()
