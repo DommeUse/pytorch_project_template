@@ -8,7 +8,7 @@ class ReconstructionOnlyLoss(nn.Module):
         self.lambda_rec = lambda_rec
         self.lambda_commit = lambda_commit
 
-    def forward(self, audio, output, commitment_loss, fake_logits, real_features, fake_features):
+    def forward(self, audio, output, commitment_loss, **kwargs):
         rec = self.rec_loss(output, audio)
 
         total = self.lambda_rec * rec + self.lambda_commit * commitment_loss
