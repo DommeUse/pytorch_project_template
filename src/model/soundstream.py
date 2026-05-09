@@ -15,8 +15,8 @@ class SoundStream(nn.Module):
         )
         self.decoder = Decoder(encoder_channels = encoder_channels, target_channels = target_channels)
 
-    def forward(self, x):
-        z = self.encoder(x)
+    def forward(self, audio, **kwargs):
+        z = self.encoder(audio)
         z_hat, all_idx, all_commitment, all_ppls = self.rvq(z)
         out = self.decoder(z_hat)
         return {
