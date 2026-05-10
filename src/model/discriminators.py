@@ -79,3 +79,16 @@ class WaveDiscriminator(nn.Module):
             x = self.downsampler(x)
 
         return feature_map
+    
+class MultiScaleDiscriminator(nn.Module):
+    def __init__(self, hidden_dim = 32, n_fft = 1024, hop_length = 256, n_bins = 512, n_wave_blocks = 4):
+        super().__init__()
+
+        self.stft_disc = STFTDiscriminator(hidden_dim, n_fft, hop_length, n_bins)
+        self.wave_disc = WaveDiscriminator(n_wave_blocks)
+
+    def forward(self, x):
+        stft_features = self.stft_disc(x)
+        wave_features = self.wave_disc(x)
+
+        return stft_features + list(wave_features)

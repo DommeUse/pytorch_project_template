@@ -11,7 +11,7 @@ class GeneratorLoss(nn.Module):
         self.lambda_rec = lambda_rec
         self.lambda_commit = lambda_commit
 
-    def forward(self, audio, output, commitment_loss, fake_logits, real_features, fake_features):
+    def forward(self, audio, output, commitment_loss, fake_logits, real_features, fake_features, **kwargs):
         rec = self.rec_loss(output, audio)
         adv = generator_adversarial_loss(fake_logits)
         feat = feature_matching_loss(real_features, fake_features)

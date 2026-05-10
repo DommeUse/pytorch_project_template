@@ -1,0 +1,6 @@
+_target_: src.model.MultiScaleDiscriminator
+hidden_dim: 32
+n_fft: 1024
+hop_length: 256
+n_bins: 512
+n_wave_blocks: 4
