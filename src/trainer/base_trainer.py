@@ -30,6 +30,10 @@ class BaseTrainer:
         epoch_len=None,
         skip_oom=True,
         batch_transforms=None,
+        discriminator=None,
+        disc_criterion=None,
+        optimizer_d=None,
+        lr_scheduler_d=None
     ):
         """
         Args:
@@ -71,6 +75,12 @@ class BaseTrainer:
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.batch_transforms = batch_transforms
+
+        self.discriminator = discriminator
+        self.disc_criterion = disc_criterion
+        self.optimizer_d = optimizer_d
+        self.lr_scheduler_d = lr_scheduler_d
+        self.use_gan = discriminator is not None
 
         # define dataloaders
         self.train_dataloader = dataloaders["train"]
@@ -472,6 +482,13 @@ class BaseTrainer:
             "monitor_best": self.mnt_best,
             "config": self.config,
         }
+
+        if self.use_gan:
+            state["discriminator_state_dict"] = self.discriminator.state_dict()
+            state["optimizer_d"] = self.optimizer_d.state_dict()
+            if self.lr_scheduler_d is not None:
+                state["lr_scheduler_d"] = self.lr_scheduler_d.state_dict()
+
         filename = str(self.checkpoint_dir / f"checkpoint-epoch{epoch}.pth")
         if not (only_best and save_best):
             torch.save(state, filename)
@@ -524,6 +541,12 @@ class BaseTrainer:
         else:
             self.optimizer.load_state_dict(checkpoint["optimizer"])
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
+
+        if self.use_gan and "discriminator_state_dict" in checkpoint:
+            self.discriminator.load_state_dict(checkpoint["discriminator_state_dict"])
+            self.optimizer_d.load_state_dict(checkpoint["optimizer_d"])
+            if self.lr_scheduler_d is not None and "lr_scheduler_d" in checkpoint:
+                self.lr_scheduler_d.load_state_dict(checkpoint["lr_scheduler_d"])
 
         self.logger.info(
             f"Checkpoint loaded. Resume training from epoch {self.start_epoch}"

@@ -50,6 +50,24 @@ def main(config):
     optimizer = instantiate(config.optimizer, params=trainable_params)
     lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer)
 
+    discriminator = None
+    disc_criterion = None
+    optimizer_d = None
+    lr_scheduler_d = None
+
+    if config.trainer.get("discriminator") is not None:
+        discriminator = instantiate(config.discriminator).to(device)
+        logger.info(discriminator)
+        
+        disc_criterion = instantiate(config.disc_loss_function).to(device)
+
+        disc_params = filter(lambda p: p.requires_grad, discriminator.parameters())
+        optimizer_d = instantiate(config.optimizer_d, params = disc_params)
+        
+        if config.get("lr_scheduler_d") is not None:
+            lr_scheduler_d = instantiate(config.lr_scheduler_d, optimizer = optimizer_d)
+
+        
     # epoch_len = number of iterations for iteration-based training
     # epoch_len = None or len(dataloader) for epoch-based training
     epoch_len = config.trainer.get("epoch_len")
@@ -68,6 +86,10 @@ def main(config):
         writer=writer,
         batch_transforms=batch_transforms,
         skip_oom=config.trainer.get("skip_oom", True),
+        discriminator=discriminator,
+        disc_criterion=disc_criterion,
+        optimizer_d=optimizer_d,
+        lr_scheduler_d=lr_scheduler_d
     )
 
     trainer.train()

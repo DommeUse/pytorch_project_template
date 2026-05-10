@@ -34,7 +34,6 @@ class Trainer(BaseTrainer):
         metric_funcs = self.metrics["inference"]
         if self.is_train:
             metric_funcs = self.metrics["train"]
-            self.optimizer.zero_grad()
 
         outputs = self.model(**batch)
         batch.update(outputs)
@@ -43,15 +42,60 @@ class Trainer(BaseTrainer):
             mean_ppl = torch.stack(outputs["perplexities"]).mean().item()
             metrics.update("mean_perplexity", mean_ppl)
 
-        all_losses = self.criterion(**batch)
-        batch.update(all_losses)
+        if self.use_gan and self.is_train:
+            real_features_d = self.discriminator(batch["audio"])
+            fake_features_d = self.discriminator(batch["output"].detach())
 
-        if self.is_train:
-            batch["loss"].backward()  # sum of all losses is always called loss
+            real_logits_d = [feats[-1] for feats in real_features_d]
+            fake_logits_d = [feats[-1] for feats in fake_features_d]
+
+            d_losses = self.disc_criterion(real_logits_d, fake_logits_d)
+
+            self.optimizer_d.zero_grad()
+            d_losses["loss"].backward()
+            self.optimizer_d.step()
+            if self.lr_scheduler_d is not None:
+                self.lr_scheduler_d.step()
+
+            real_features = self.discriminator(batch["audio"])
+            fake_features = self.discriminator(batch["output"])
+            fake_logits = [feats[-1] for feats in fake_features]
+
+            g_losses = self.criterion(
+                audio = batch["audio"],
+                output = batch["output"],
+                commitment_loss = batch["commitment_loss"],
+                fake_logits = fake_logits,
+                real_features = real_features,
+                fake_features = fake_features,
+            )
+
+            self.optimizer.zero_grad()
+            g_losses["loss"].backward()
             self._clip_grad_norm()
             self.optimizer.step()
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
+
+            batch.update(g_losses)
+            batch["d_loss"] = d_losses["loss"]
+
+        elif self.is_train:
+            all_losses = self.criterion(**batch)
+            batch.update(all_losses)
+
+            self.optimizer.zero_grad()
+            batch["loss"].backward()
+            self._clip_grad_norm()
+            self.optimizer.step()
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
+
+        else:
+            rec = self.criterion.rec_loss(batch["output"], batch["audio"])
+            batch["g_rec"] = rec
+            batch["g_commit"] = batch["commitment_loss"]
+            batch["loss"] = rec
 
         # update metrics for each loss (in case of multiple losses)
         for loss_name in self.config.writer.loss_names:
