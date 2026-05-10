@@ -146,7 +146,7 @@ class BaseTrainer:
         )
 
         if config.trainer.get("resume_from") is not None:
-            resume_path = self.checkpoint_dir / config.trainer.resume_from
+            resume_path = config.trainer.resume_from
             self._resume_checkpoint(resume_path)
 
         if config.trainer.get("from_pretrained") is not None:
