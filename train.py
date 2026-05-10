@@ -55,7 +55,7 @@ def main(config):
     optimizer_d = None
     lr_scheduler_d = None
 
-    if config.trainer.get("discriminator") is not None:
+    if config.get("discriminator") is not None:
         discriminator = instantiate(config.discriminator).to(device)
         logger.info(discriminator)
         
