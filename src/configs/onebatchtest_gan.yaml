@@ -1,0 +1,11 @@
+defaults:
+  - soundstream_gan
+  - override datasets: librispeech_onebatchtest
+  - _self_
+
+trainer:
+  log_step: 25
+  n_epochs: 2
+  epoch_len: 500
+  monitor: "max test_STOI"
+  save_period: 100
