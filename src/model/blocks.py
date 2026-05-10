@@ -133,7 +133,7 @@ class ResidualUnit2d(nn.Module):
         )
 
     def forward(self, x):
-        return self.skip_connection(x) + self.net(F.pad(x, (self.s[0] + 1, 0, self.s[1] + 1, 0)))
+        return self.skip_connection(x) + self.net(F.pad(x, (self.s[1] + 1, 0, self.s[0] + 1, 0)))
 
 def NormalizedConv1d(**kwargs):
     return nn.utils.parametrizations.weight_norm(nn.Conv1d(**kwargs))
