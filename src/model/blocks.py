@@ -112,6 +112,8 @@ class ResidualUnit2d(nn.Module):
     def __init__(self, in_channels, out_channels, m, s: Tuple[int, int]):
         super().__init__()
 
+        self.s = s
+
         self.net = nn.Sequential(
             nn.Conv2d(kernel_size = (3, 3), in_channels = in_channels, out_channels = out_channels, padding = 'same'),
             nn.ELU(),
@@ -119,8 +121,7 @@ class ResidualUnit2d(nn.Module):
                 kernel_size = (s[0] + 2, s[1] + 2), 
                 in_channels = out_channels, 
                 out_channels = out_channels * m, 
-                stride = s,
-                padding = (s[0] // 2 + 1, s[1] // 2 + 1)
+                stride = s
             )
         )
 
@@ -132,7 +133,7 @@ class ResidualUnit2d(nn.Module):
         )
 
     def forward(self, x):
-        return self.skip_connection(x) + self.net(x)
+        return self.skip_connection(x) + self.net(F.pad(x, (self.s[0] + 1, 0, self.s[1] + 1, 0)))
 
 def NormalizedConv1d(**kwargs):
     return nn.utils.parametrizations.weight_norm(nn.Conv1d(**kwargs))
