@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchaudio
 
+import math
+
 class MultiScaleMelLoss(nn.Module):
     def __init__(self, sample_rate = 16000, window_sizes = [2**s for s in range(6, 12)], mel_bins = 64, eps = 1e-5):
         super().__init__()
@@ -23,7 +25,7 @@ class MultiScaleMelLoss(nn.Module):
             for s in window_sizes
         ])
 
-        alphas = torch.tensor([(s / 2) ** 0.5 for s in window_sizes])
+        alphas = torch.tensor([(math.log2(s) / 2) ** 0.5 for s in window_sizes])
         self.register_buffer("alphas", alphas)
 
     def forward(self, output, audio):
