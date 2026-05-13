@@ -12,7 +12,7 @@ class STFTDiscriminator(nn.Module):
 
         self.net = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(kernel_size = (7, 7), in_channels = 1, out_channels = 32, padding = 3),
+                nn.Conv2d(kernel_size = (7, 7), in_channels = 2, out_channels = 32, padding = 3),
                 nn.ELU()
             ),
             nn.Sequential(
@@ -48,10 +48,12 @@ class STFTDiscriminator(nn.Module):
             n_fft = self.n_fft,
             hop_length = self.hop_length,
             win_length = 1024,
-            return_complex = True
+            return_complex = True,
+            center = True
         )
 
-        spec = spec.abs().unsqueeze(1)
+        spec = spec[:, 1:]
+        spec = torch.view_as_real(spec).permute(0, 3, 1, 2)
 
         feature_map = []
         for i in range(len(self.net)):
@@ -60,7 +62,7 @@ class STFTDiscriminator(nn.Module):
         return feature_map
 
 class WaveDiscriminator(nn.Module):
-    def __init__(self, n_blocks = 4):
+    def __init__(self, n_blocks = 3):
         super().__init__()
 
         self.n_blocks = n_blocks
@@ -81,7 +83,7 @@ class WaveDiscriminator(nn.Module):
         return feature_map
     
 class MultiScaleDiscriminator(nn.Module):
-    def __init__(self, hidden_dim = 32, n_fft = 1024, hop_length = 256, n_bins = 512, n_wave_blocks = 4):
+    def __init__(self, hidden_dim = 32, n_fft = 1024, hop_length = 256, n_bins = 512, n_wave_blocks = 3):
         super().__init__()
 
         self.stft_disc = STFTDiscriminator(hidden_dim, n_fft, hop_length, n_bins)
