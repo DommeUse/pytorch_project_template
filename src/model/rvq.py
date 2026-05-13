@@ -94,11 +94,9 @@ class VectorQuantizer(nn.Module):
             self._update_ema(z_flat, idx)
             self._reset_dead_codes(z_flat)
 
-        commitment_loss = torch.nn.functional.mse_loss(z, z_hat.detach())
-        z_hat = z + (z_hat - z).detach()
         perplexity = self._compute_ppl(idx)
         
-        return z_hat, idx.view(B, T), commitment_loss, perplexity
+        return z_hat, idx.view(B, T), perplexity
 
 
 class ResidualVQ(nn.Module):
@@ -120,15 +118,15 @@ class ResidualVQ(nn.Module):
         total_commitment = 0
 
         for quantizer in self.quantizers:
-            q, idx, commitment, ppl = quantizer(residual)
+            q, idx, ppl = quantizer(residual)
 
             z_hat = z_hat + q
             residual = residual - q
 
             all_idx.append(idx)
             all_ppls.append(ppl)
-            total_commitment += commitment
 
-        avg_commitment = total_commitment / self.n_quantizers
+        commitment_loss = torch.nn.functional.mse_loss(z, z_hat.detach())
+        z_hat = z + (z_hat - z).detach()
 
-        return z_hat, all_idx, avg_commitment, all_ppls
+        return z_hat, all_idx, commitment_loss, all_ppls
