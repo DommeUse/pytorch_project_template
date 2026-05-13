@@ -10,11 +10,8 @@ class Encoder(nn.Module):
             CausalConv1d(in_channels = 1, out_channels = encoder_channels, kernel_size = 7),
             nn.ELU(),
             EncoderBlock(n_channels = 2 * encoder_channels, stride = 2),
-            nn.ELU(),
             EncoderBlock(n_channels = 4 * encoder_channels, stride = 4),
-            nn.ELU(),
             EncoderBlock(n_channels = 8 * encoder_channels, stride = 5),
-            nn.ELU(),
             EncoderBlock(n_channels = 16 * encoder_channels, stride = 5),
             nn.ELU(),
             CausalConv1d(in_channels = 16 * encoder_channels, out_channels = target_channels, kernel_size = 3)

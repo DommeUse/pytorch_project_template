@@ -45,6 +45,7 @@ class ResidualUnit(nn.Module):
         super().__init__()
 
         self.net = nn.Sequential(
+            nn.ELU(),
             CausalConv1d(
                 in_channels = n_channels,
                 out_channels = n_channels,
@@ -69,9 +70,7 @@ class EncoderBlock(nn.Module):
         
         self.net = nn.Sequential(
             ResidualUnit(n_channels = n_channels // 2, dilation = 1),
-            nn.ELU(),
             ResidualUnit(n_channels = n_channels // 2, dilation = 3),
-            nn.ELU(),
             ResidualUnit(n_channels = n_channels // 2, dilation = 9),
             nn.ELU(),
             CausalConv1d(
@@ -91,17 +90,15 @@ class DecoderBlock(nn.Module):
         super().__init__()
 
         self.net = nn.Sequential(
+            nn.ELU(),
             CausalConvTranspose1d(
                 in_channels = n_channels, 
                 out_channels = n_channels // 2, 
                 kernel_size = 2 * stride, 
                 stride = stride
             ),
-            nn.ELU(),
             ResidualUnit(n_channels = n_channels // 2, dilation = 1),
-            nn.ELU(),
             ResidualUnit(n_channels = n_channels // 2, dilation = 3),
-            nn.ELU(),
             ResidualUnit(n_channels = n_channels // 2, dilation = 9),
         )
     
