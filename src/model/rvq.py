@@ -39,6 +39,11 @@ class VectorQuantizer(nn.Module):
             not_empty = frequency != 0
             centroids[not_empty] = new_centroids[not_empty]
 
+            n_empty = (~not_empty).sum().item()
+            if n_empty > 0:
+                resample_idx = torch.randint(0, z_flat.shape[0], (n_empty, ), device = z_flat.device)
+                centroids[~not_empty] = z_flat[resample_idx]
+
         self.codebook.copy_(centroids)
         self.cluster_size.fill_(1)
         self.embedding_sum.copy_(centroids)
@@ -67,7 +72,7 @@ class VectorQuantizer(nn.Module):
         replace_idx = torch.randint(0, z_flat.shape[0], (int(dead_idx.sum()),), device = z_flat.device)
 
         self.codebook[dead_idx] = z_flat[replace_idx]
-        self.cluster_size[dead_idx] = 1
+        self.cluster_size[dead_idx] = self.dead_code_threshold + 1
         self.embedding_sum[dead_idx] = z_flat[replace_idx]
 
     @torch.no_grad()
