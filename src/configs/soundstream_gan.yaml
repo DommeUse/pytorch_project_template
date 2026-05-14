@@ -35,3 +35,4 @@ trainer:
   early_stop: ${trainer.n_epochs} # epochs for early stopping
   save_dir: "saved"
   seed: 1
+  max_grad_norm: 1.0 

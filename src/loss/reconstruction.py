@@ -45,7 +45,7 @@ class MultiScaleMelLoss(nn.Module):
             log_output = torch.log(mel_output + self.eps)
             log_audio = torch.log(mel_audio + self.eps)
             
-            l2 = F.mse_loss(log_output, log_audio).sqrt()
+            l2 = F.mse_loss(log_output, log_audio)
 
             loss = loss + l1 + self.alphas[i] * l2
 
