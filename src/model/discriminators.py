@@ -10,6 +10,8 @@ class STFTDiscriminator(nn.Module):
         self.n_fft = n_fft
         self.hop_length = hop_length
 
+        self.register_buffer("window", torch.hann_window(window_length = n_fft))
+
         self.net = nn.ModuleList([
             nn.Sequential(
                 nn.Conv2d(kernel_size = (7, 7), in_channels = 2, out_channels = 32, padding = 3),
@@ -48,6 +50,7 @@ class STFTDiscriminator(nn.Module):
             n_fft = self.n_fft,
             hop_length = self.hop_length,
             win_length = 1024,
+            window = self.window,
             return_complex = True,
             center = True
         )
