@@ -17,4 +17,9 @@ class STOIMetric(BaseMetric):
             output = output.squeeze(1)
         if audio.dim() == 3:
             audio = audio.squeeze(1)
+
+        min_len = min(output.shape[-1], audio.shape[-1])
+        output = output[..., :min_len]
+        audio = audio[..., :min_len]
+
         return self.metric(output, audio).item()
