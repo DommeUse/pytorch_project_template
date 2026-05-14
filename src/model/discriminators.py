@@ -56,7 +56,7 @@ class STFTDiscriminator(nn.Module):
         )
 
         spec = spec[:, 1:]
-        spec = torch.view_as_real(spec).permute(0, 3, 2, 1)
+        spec = torch.view_as_real(spec).permute(0, 3, 1, 2)
 
         feature_map = []
         for i in range(len(self.net)):
