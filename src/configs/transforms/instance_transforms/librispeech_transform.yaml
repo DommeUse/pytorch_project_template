@@ -9,5 +9,5 @@ librispeech_transform:
     audio:
       _target_: src.transforms.AudioCutter
       target_sr: 16000
-      duration: 10.0
+      duration: 5.0
       is_train: False
