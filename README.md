@@ -1,149 +1,296 @@
-# PyTorch Template for DL projects
+# SoundStream - нейросетевой аудио-кодек
 
-<p align="center">
-  <a href="#about">About</a> •
-  <a href="#tutorials">Tutorials</a> •
-  <a href="#examples">Examples</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#how-to-use">How To Use</a> •
-  <a href="#useful-links">Useful Links</a> •
-  <a href="#credits">Credits</a> •
-  <a href="#license">License</a>
-</p>
+Реализация [SoundStream (Zeghidour et al., 2021)](https://arxiv.org/abs/2107.03312) для домашнего задания №4 по курсу Глубинного обучения.
 
-<p align="center">
-<a href="https://github.com/Blinorot/pytorch_project_template/generate">
-  <img src="https://img.shields.io/badge/use%20this-template-green?logo=github">
-</a>
-<a href="https://github.com/Blinorot/pytorch_project_template/blob/main/LICENSE">
-   <img src=https://img.shields.io/badge/license-MIT-blue.svg>
-</a>
-<a href="https://github.com/Blinorot/pytorch_project_template/blob/main/CITATION.cff">
-   <img src="https://img.shields.io/badge/cite-this%20repo-purple">
-</a>
-</p>
+Проект построен на основе [pytorch_project_template](https://github.com/Blinorot/pytorch_project_template) с использованием [Hydra](https://hydra.cc/docs/intro/) для конфигурации и [Comet ML](https://www.comet.com/) для логирования.
 
-## About
+## Содержание
 
-This repository contains a template for [PyTorch](https://pytorch.org/)-based Deep Learning projects.
+- [Архитектура](#архитектура)
+- [Структура репозитория](#структура-репозитория)
+- [Установка](#установка)
+- [Тренировка](#тренировка)
+- [Инференс](#инференс)
+- [Результаты](#результаты)
+- [Comet эксперименты](#comet-эксперименты)
 
-The template utilizes different python-dev techniques to improve code readability. Configuration methods enhance reproducibility and experiments control.
+## Архитектура
 
-The repository is released as a part of the [HSE DLA course](https://github.com/markovka17/dla), however, can easily be adopted for any DL-task.
+| Компонент | Параметры |
+|---|---|
+| Encoder | каузальный SEANet, страйды `[2, 4, 5, 5]`, base channels = 32 |
+| Residual unit | kernel_size 7, dilation `(1, 3, 9)`, pre-activation, ELU |
+| RVQ | 8 квантизаторов $\times$ размер кодбука 1024, EMA decay 0.99, k-means инициализация, dead-code-reset с порогом  2 |
+| Decoder | зеркальный энкодеру, страйды `[5, 5, 4, 2]`, `CausalConvTranspose1d` |
+| Latent dim | 128 |
+| Wave discriminator | multi-scale (3 разрешения), 1D-свёртки, LeakyReLU 0.2, weight norm |
+| STFT discriminator | n_fft = 1024, hop_length = 256, 2-канальный complex spectrum (real+imag), drop DC bin |
+| Reconstruction loss | multi-scale mel-spectrogram, $s \in \{2^6, 2^7, 2^8, 2^9, 2^{10}, 2^{11}\}$, 64 mel-бина |
+| Adversarial loss | hinge GAN на всех дискриминаторах |
+| Feature matching | mean L1-loss между `real_feat.detach()` и `fake_feat` |
+| Веса лоссов | $\lambda_{adv} = 1, \lambda_{feat} = 100, \lambda_{rec} = 1, \lambda_{commit} = 1$ |
+| Оптимизатор | Adam, lr = 1e-4(const), $\beta$ = (0.5, 0.9) |
 
-This template is the official recommended template for the [EPFL CS-433 ML Course](https://www.epfl.ch/labs/mlo/machine-learning-cs-433/).
+Параметры тренировки: кропы по 0.5 секунд, batch size = 12, 45000 шагов на NVIDIA T4 (Kaggle) и NVIDIA A100(Colab).
 
-**New:** we added a [HF Main](https://github.com/Blinorot/pytorch_project_template/tree/hf_main) variant of the template with [HuggingFace](https://huggingface.co/) Integration for multi-GPU and multi-node training, automatic mixed precision, gradient accumulation, and seamless HuggingFace Ecosystem Compatibility.
+## Структура репозитория
 
-> 📖 **If you use this template in your work, please cite this repository or include a reference. Attribution supports the project and encourages continued development.**
-
-## Tutorials
-
-This template utilizes experiment tracking techniques, such as [WandB](https://docs.wandb.ai/) and [Comet ML](https://www.comet.com/docs/v2/), and [Hydra](https://hydra.cc/docs/intro/) for the configuration. It also automatically reformats code and conducts several checks via [pre-commit](https://pre-commit.com/). If you are not familiar with these tools, we advise you to look at the tutorials below:
-
-- [Python Dev Tips](https://github.com/ebezzam/python-dev-tips): information about [Git](https://git-scm.com/doc), [pre-commit](https://pre-commit.com/), [Hydra](https://hydra.cc/docs/intro/), and other stuff for better Python code development. The YouTube recording of the workshop is available [here](https://youtu.be/okxaTuBdDuY).
-
-- [Seminar on R&D Coding 2025](https://youtu.be/PE1zaW5it_A): Seminar from the [LauzHack Deep Learning Bootcamp](https://github.com/LauzHack/deep-learning-bootcamp/) with discussion on logging, project-based coding, configuration, and reproducibility. The materials can be found [here](https://github.com/LauzHack/deep-learning-bootcamp/tree/summer25/day05).
-
-- [Seminar on R&D Coding 2024](https://youtu.be/sEA-Js5ZHxU): Seminar from the [LauzHack Deep Learning Bootcamp](https://github.com/LauzHack/deep-learning-bootcamp/) with template discussion and reasoning. It also explains how to work with [WandB](https://docs.wandb.ai/). The seminar materials can be found [here](https://github.com/LauzHack/deep-learning-bootcamp/blob/main/day03/Seminar_WandB_and_Coding.ipynb).
-
-- [HSE DLA Course Introduction Week](https://github.com/markovka17/dla/tree/2024/week01): combines the two seminars above into one with some updates, including an extra example for [Comet ML](https://www.comet.com/docs/v2/).
-
-- [PyTorch Basics](https://github.com/markovka17/dla/tree/2024/week01/intro_to_pytorch): several notebooks with [PyTorch](https://pytorch.org/docs/stable/index.html) basics and corresponding seminar recordings from the [LauzHack Deep Learning Bootcamp](https://github.com/LauzHack/deep-learning-bootcamp/).
-
-To start working with a template, just click on the `use this template` button.
-
-<a href="https://github.com/Blinorot/pytorch_project_template/generate">
-  <img src="https://img.shields.io/badge/use%20this-template-green?logo=github">
-</a>
-
-You can choose any of the branches as a starting point. [Set your choice as the default branch](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-branches-in-your-repository/changing-the-default-branch) in the repository settings. You can also [delete unnecessary branches](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-and-deleting-branches-within-your-repository).
-
-## Examples
-
-> [!IMPORTANT]
-> The main branch leaves some of the code parts empty or fills them with dummy examples, showing just the base structure. The final users can add code required for their own tasks.
-
-You can find examples of this template completed for different tasks in other branches:
-
-- [HF Main](https://github.com/Blinorot/pytorch_project_template/tree/hf_main): the variant of the `main` branch with [HuggingFace](https://huggingface.co/) Integration. Supports multi-GPU and multi-node training, automatic mixed precision, gradient accumulation, and seamless HuggingFace Ecosystem Compatibility.
-
-- [Image classification](https://github.com/Blinorot/pytorch_project_template/tree/example/image-classification): simple classification problem on [MNIST](https://yann.lecun.com/exdb/mnist/) and [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) datasets.
-
-- [ASR](https://github.com/Blinorot/pytorch_project_template/tree/example/asr): template for the automatic speech recognition (ASR) task. Some of the parts (for example, `collate_fn` and beam search for `text_encoder`) are missing for studying purposes of [HSE DLA course](https://github.com/markovka17/dla).
-
-## Installation
-
-Installation may depend on your task. The general steps are the following:
-
-0. (Optional) Create and activate new environment using [`conda`](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) or `venv` ([`+pyenv`](https://github.com/pyenv/pyenv)).
-
-   a. `conda` version:
-
-   ```bash
-   # create env
-   conda create -n project_env python=PYTHON_VERSION
-
-   # activate env
-   conda activate project_env
-   ```
-
-   b. `venv` (`+pyenv`) version:
-
-   ```bash
-   # create env
-   ~/.pyenv/versions/PYTHON_VERSION/bin/python3 -m venv project_env
-
-   # alternatively, using default python version
-   python3 -m venv project_env
-
-   # activate env
-   source project_env/bin/activate
-   ```
-
-1. Install all required packages
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. Install `pre-commit`:
-   ```bash
-   pre-commit install
-   ```
-
-## How To Use
-
-To train a model, run the following command:
-
-```bash
-python3 train.py -cn=CONFIG_NAME HYDRA_CONFIG_ARGUMENTS
+```
+.
+├── src/
+│   ├── configs/                      # Hydra конфиги
+│   │   ├── soundstream.yaml          # baseline без дискриминатора
+│   │   ├── soundstream_gan.yaml      # полная GAN-тренировка
+│   │   ├── onebatchtest.yaml         # sanity-check на 32 файлах
+│   │   ├── onebatchtest_gan.yaml     # GAN sanity-check на 32 файлах
+│   │   ├── inference.yaml            # конфиг для инференса
+│   │   ├── model/                    # архитектура SoundStream
+│   │   ├── discriminator/            # параметры MultiScaleDiscriminator
+│   │   ├── loss_function/            # параметры GeneratorLoss, ReconstructionOnlyLoss
+│   │   ├── disc_loss_function/       # параметры DiscriminatorLoss
+│   │   ├── datasets/, dataloader/    # LibriSpeech
+│   │   ├── transforms/               # обрезка и подготовка аудио
+│   │   ├── metrics/                  # STOI, NISQA, MeanPerplexity
+│   │   ├── optimizer_d/              # Adam для дискриминатора
+│   │   └── writer/                   # Comet ML
+│   ├── model/
+│   │   ├── soundstream.py            # SoundStream (encoder + RVQ + decoder)
+│   │   ├── encoder.py, decoder.py    # SEANet архитектура
+│   │   ├── rvq.py                    # ResidualVQ
+│   │   ├── blocks.py                 # все структурные блоки(ResidualUnit, CausalConv1d, и т.д.)
+│   │   └── discriminators.py         # WaveDisc, STFTDisc, MultiScaleDisc
+│   ├── loss/
+│   │   ├── reconstruction.py         # MultiScaleMelLoss
+│   │   ├── adversarial.py            # hinge / feature-matching функции
+│   │   ├── generator.py              # GeneratorLoss
+│   │   ├── discriminator.py          # DiscriminatorLoss
+│   │   └── reconstruction_only.py    # ReconstructionOnlyLoss (для baseline без дискриминатора)
+│   ├── metrics/
+│   │   ├── stoi.py, nisqa_v2.py      # реализация метрик с помощью torchmetrics
+│   │   └── perplexity.py             # утилизация кодбуков
+│   ├── datasets/                     # LibriSpeech, collate_fn
+│   ├── transforms/                   # AudioCutter
+│   ├── trainer/
+│   │   ├── base_trainer.py           # с поддержкой двух оптимизаторов
+│   │   ├── trainer.py                # GAN-цикл + recon-only
+│   │   └── inferencer.py             # для инференса
+│   └── ...
+├── scripts/                          # утилиты и sanity-тесты
+├── train.py                          # точка входа для тренировки
+├── inference.py                      # точка входа для инференса
+├── requirements.txt
+├── README.md                         # этот файл
+└── REPORT.md                         # отчёт по работе и сложностям
 ```
 
-Where `CONFIG_NAME` is a config from `src/configs` and `HYDRA_CONFIG_ARGUMENTS` are optional arguments.
-
-To run inference (evaluate the model or save predictions):
+## Установка
 
 ```bash
-python3 inference.py HYDRA_CONFIG_ARGUMENTS
+git clone -b soundstream-gan https://github.com/DommeUse/pytorch_project_template.git
+cd pytorch_project_template
+git checkout soundstream-gan
+
+# создать виртуальное окружение (опционально)
+python3 -m venv venv && source venv/bin/activate
+
+pip install -r requirements.txt
 ```
 
-## Useful Links:
+## Тренировка
 
-You may find the following links useful:
+### Подготовка данных
 
-- [Report branch](https://github.com/Blinorot/pytorch_project_template/tree/report): Guidelines for writing a scientific report/paper (with an emphasis on DL projects).
+LibriSpeech скачивается автоматически при первом запуске. Можно также указать путь к уже скачанным данным, добавив в `python train.py` следующие hydra-аргументы:
 
-- [CLAIRE Template](https://github.com/CLAIRE-Labo/python-ml-research-template): additional template by [EPFL CLAIRE Laboratory](https://www.epfl.ch/labs/claire/) that can be combined with ours to enhance experiments reproducibility via [Docker](https://www.docker.com/).
+```bash
++datasets.train.data_dir="<LIBRISPEECH_PATH>" \
++datasets.test.data_dir="<LIBRISPEECH_PATH>"
+# структура: <LIBRISPEECH_PATH>/{train-clean-100, test-clean}
+```
 
-- [Mamba](https://github.com/mamba-org/mamba) and [Poetry](https://python-poetry.org/): alternatives to [Conda](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) and [pip](https://pip.pypa.io/en/stable/installation/) package managers given above.
+### Comet ML
 
-- [Awesome README](https://github.com/matiassingers/awesome-readme): a list of awesome README files for inspiration. Check the basics [here](https://github.com/PurpleBooth/a-good-readme-template).
+API-ключ лучше положить в переменную окружения:
+```bash
+export COMET_API_KEY=<your_key>
+```
 
-## Credits
+### Sanity check (One batch test)
 
-This repository is based on a heavily modified fork of [pytorch-template](https://github.com/victoresque/pytorch-template) and [asr_project_template](https://github.com/WrathOfGrapes/asr_project_template) repositories.
+Проверка, что pipeline собирается и обучение работает корректно:
 
-## License
+```bash
+# recon-only sanity (~500 шагов)
+PYTHONPATH=. python train.py --config-name=onebatchtest writer.run_name="<exp-name>"
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](/LICENSE)
+# GAN sanity (~1000 шагов)
+PYTHONPATH=. python train.py --config-name=onebatchtest_gan writer.run_name="<exp-name>"
+```
+
+### Полная тренировка
+
+**Reconstruction-only baseline** (без GAN):
+```bash
+PYTHONPATH=. python train.py \
+    --config-name=soundstream \
+    writer.run_name="<exp-name>"
+```
+
+**Полная GAN-тренировка**:
+```bash
+PYTHONPATH=. python train.py \
+    --config-name=soundstream_gan \
+    writer.run_name="<exp-name>"
+```
+
+### Kaggle
+
+Предварительно в Kaggle Input добавьте датасет Librispeech - это освободит вас от необходимости его устанавливать при первом запуске.
+
+Для запуска на Kaggle (T4):
+
+```python
+# В первой ячейке ноутбука:
+!git clone -b soundstream-gan https://github.com/DommeUse/pytorch_project_template.git
+%cd pytorch_project_template
+!pip install -r requirements.txt
+
+# Далее добавляем ваш ключ в переменную окружения
+
+# 1 вариант
+import os
+os.environ["COMET_API_KEY"] = "<your_key>"
+# 2 вариант(нужно предварительно его добавить в kaggle secrets)
+import os
+from kaggle_secrets import UserSecretsClient
+
+user_secrets = UserSecretsClient()
+os.environ["COMET_API_KEY"] = user_secrets.get_secret("COMET_API_KEY")
+
+# Запуск обучения
+
+!python train.py \
+    --config-name=soundstream_gan \
+    trainer.save_dir="/kaggle/working/saved" \
+    +datasets.train.data_dir="/kaggle/input/datasets/a24998667/librispeech" \
+    +datasets.test.data_dir="/kaggle/input/datasets/a24998667/librispeech" \
+    writer.log_checkpoints=True \ # для сохранения чекпоинтов
+    writer.run_name="<exp-name>"
+```
+
+### Colab
+
+В Google Colab нет встроенной базы датасетов, поэтому придется загружать датасет самому. В остальном шаги аналогичные.
+
+Для запуска на Colab (T4):
+
+```python
+# В первой ячейке ноутбука:
+!git clone -b soundstream-gan https://github.com/DommeUse/pytorch_project_template.git
+%cd pytorch_project_template
+!pip install -r requirements.txt
+
+# Далее добавляем ваш ключ в переменную окружения
+
+# 1 вариант
+import os
+os.environ["COMET_API_KEY"] = "<your_key>"
+# 2 вариант(нужно предварительно его добавить в colab secrets)
+import os
+from google.colab import userdata
+
+os.environ["COMET_API_KEY"] = userdata.get('COMET_API_KEY')
+
+# Запуск обучения
+
+!python train.py \
+    --config-name=soundstream_gan \
+    trainer.save_dir="/kaggle/working/saved" \
+    writer.log_checkpoints=True \ # для сохранения чекпоинтов
+    writer.run_name="<exp-name>"
+```
+
+## Инференс
+
+### Загрузка модели
+
+Преобученный чекпоинт модели загружен на Google Drive, поэтому сначала нам нужно его скачать с помощью библиотеки gdown
+
+```bash
+!pip install -q gdown
+```
+
+Далее выполняем код
+
+```python
+import gdown
+
+CHECKPOINT_GDRIVE_ID = '1bVDPp12NwIwe9VNfy1DjGNi-Xk0HODYU'
+CHECKPOINT_PATH = 'checkpoint.pth'
+
+gdown.download(id = CHECKPOINT_GDRIVE_ID, output = CHECKPOINT_PATH, quiet = False)
+```
+
+Теперь мы можем загрузить веса самой модели
+
+```python
+import torch
+from pathlib import Path
+from src.model import SoundStream
+from src.trainer import FileInferencer
+
+# такой же сетап, как у преобученной модели
+model = SoundStream(
+    encoder_channels = 32,
+    target_channels = 128,
+    n_quantizers = 8,
+    codebook_size = 1024,
+).to(device)            
+
+checkpoint = torch.load(CHECKPOINT_PATH, map_location = device, weights_only = False)
+state_dict = checkpoint.get('state_dict', checkpoint)
+model.load_state_dict(state_dict, strict = True) # загружаем веса
+```
+
+### Реконструкция аудио-файлов через обученную модель
+
+Для этого есть класс inferencer.FileInferencer, с помощью которого можно реконструировать аудио-файлы.
+
+```python
+from inferencer import FileInferencer
+
+save_path = Path("<путь к папке, куда вы хотите сохранить результаты>")
+sample_rate = 16_000 # обученная модель работает с такой частотой
+
+file_inferencer = FileInferencer(model, sample_rate, device, save_path)
+```
+
+```python
+input_path = <путь к вашему файлу>
+output_name = <имя файла для сохранения в save_path>
+reconstructed = file_inferencer(input_path, output_name)
+```
+
+
+## Результаты
+
+### Финальные метрики (на test-clean)
+
+| Метрика | Recon-only baseline | Полный GAN | Порог в задании |
+|---|---|---|---|
+| STOI | <заполнить> | **<заполнить>** | > 0.80 |
+| NISQA MOS | <заполнить> | **<заполнить>** | > 2.25 |
+| Mean perplexity (8 квантизаторов) | <заполнить> | <заполнить> | - |
+
+Подробное обсуждение результатов и сравнение GAN vs no-GAN - в [REPORT.md](./REPORT.md).
+
+## Comet эксперименты
+
+- Recon-only baseline: https://www.comet.com/german-zverev/soundstream/kcxmna44b39ehi51rp43aqmo16koj11r
+- GAN финальный: TODO
+
+## Ссылки
+
+- Шаблон проекта: [pytorch_project_template](https://github.com/Blinorot/pytorch_project_template) by [Petr Grinberg](https://github.com/Blinorot)
+- Архитектура SoundStream: Zeghidour et al., 2021, [arXiv:2107.03312](https://arxiv.org/abs/2107.03312)
+- Архитектура SEANet: M. Tagliasacchi, Y. Li, K. Misiunas, and D. Roble, 2020, [arXiv:2009.02095](https://arxiv.org/abs/2009.02095)
