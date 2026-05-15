@@ -5,6 +5,10 @@ from tqdm.auto import tqdm
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
 
+import torchaudio
+import numpy as np
+
+from pathlib import Path
 
 class Inferencer(BaseTrainer):
     """
@@ -185,3 +189,42 @@ class Inferencer(BaseTrainer):
                 )
 
         return self.evaluation_metrics.result()
+
+
+class FileInferencer:
+    def __init__(self, model, sample_rate, device, save_path):
+        self.model = model
+        self.sample_rate = sample_rate
+        self.device = device
+        self.save_path = save_path
+
+    def __call__(self, file_path, output_name):
+        self.model.eval()
+
+        audio_np, sample_rate = sf.read(file_path)
+        audio = torch.from_numpy(audio_np).float()
+
+        if audio.ndim == 2:
+            audio = audio.mean(dim = -1)
+
+        if sample_rate != self.sample_rate:
+            audio = torchaudio.functional.resample(audio, sample_rate, self.sample_rate)
+
+        # Падим до кратности общему страйду энкодера-декодера (2*4*5*5 = 200)
+        total_stride = 200
+        orig_len = audio.shape[-1]
+        pad = (-orig_len) % total_stride
+        if pad > 0:
+            audio = torch.nn.functional.pad(audio, (0, pad))
+
+        audio = audio.unsqueeze(0).unsqueeze(0).to(self.device)
+        outputs = self.model(audio = audio)
+
+        reconstructed = outputs["output"][..., :orig_len]
+        reconstructed = reconstructed.squeeze().cpu().numpy()
+        reconstructed = np.clip(reconstructed, -1.0, 1.0)
+
+        self.save_path.mkdir(parents = True, exist_ok = True)
+        sf.write(self.save_path / output_name, reconstructed, self.sample_rate)
+
+        return reconstructed
