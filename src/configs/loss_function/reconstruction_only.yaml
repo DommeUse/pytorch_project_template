@@ -1,4 +1,4 @@
 _target_: src.loss.ReconstructionOnlyLoss
 sample_rate: 16000
-lambda_rec: 1.0
+lambda_rec: 4.0
 lambda_commit: 1.0

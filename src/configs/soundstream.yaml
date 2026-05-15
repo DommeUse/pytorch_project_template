@@ -10,7 +10,8 @@ defaults:
 
 optimizer:
   _target_: torch.optim.Adam
-  lr: 2e-4
+  lr: 1e-4
+  betas: [0.5, 0.9]
 
 lr_scheduler:
   _target_: torch.optim.lr_scheduler.LambdaLR
@@ -31,3 +32,4 @@ trainer:
   early_stop: ${trainer.n_epochs} # epochs for early stopping
   save_dir: "saved"
   seed: 1
+  max_grad_norm: 1.0 
