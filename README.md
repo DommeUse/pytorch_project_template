@@ -278,16 +278,16 @@ reconstructed = file_inferencer(input_path, output_name)
 
 | Метрика | Recon-only baseline | Полный GAN | Порог в задании |
 |---|---|---|---|
-| STOI | <заполнить> | **<заполнить>** | > 0.80 |
-| NISQA MOS | <заполнить> | **<заполнить>** | > 2.25 |
-| Mean perplexity (8 квантизаторов) | <заполнить> | <заполнить> | - |
+| STOI | **0.818** | **0.777** | > 0.80 |
+| NISQA MOS | **1.654** | **2.596** | > 2.25 |
+| Mean perplexity (8 квантизаторов) | **402.77** | **425** | - |
 
 Подробное обсуждение результатов и сравнение GAN vs no-GAN - в [REPORT.md](./REPORT.md).
 
 ## Comet эксперименты
 
 - Recon-only baseline: https://www.comet.com/german-zverev/soundstream/kcxmna44b39ehi51rp43aqmo16koj11r
-- GAN финальный: TODO
+- GAN финальный: https://www.comet.com/german-zverev/soundstream/1fn2j76oxlff2oclv45qtavignuxpu65
 
 ## Ссылки
 
