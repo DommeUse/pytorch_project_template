@@ -221,7 +221,7 @@ class FileInferencer:
         outputs = self.model(audio = audio)
 
         reconstructed = outputs["output"][..., :orig_len]
-        reconstructed = reconstructed.squeeze().cpu().numpy()
+        reconstructed = reconstructed.detach().squeeze().cpu().numpy()
         reconstructed = np.clip(reconstructed, -1.0, 1.0)
 
         self.save_path.mkdir(parents = True, exist_ok = True)
