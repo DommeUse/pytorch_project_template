@@ -41,7 +41,7 @@ class STFTDiscriminator(nn.Module):
                 ResidualUnit2d(in_channels = 8 * hidden_dim, out_channels = 8 * hidden_dim, m = 2, s = (2, 2)),
                 nn.ELU(),
             ),
-            nn.Conv2d(kernel_size = (n_bins // 2**6, 1), in_channels = 16 * hidden_dim, out_channels = 1)
+            nn.Conv2d(kernel_size = (1, n_bins // 2**6), in_channels = 16 * hidden_dim, out_channels = 1)
         ])
 
     def forward(self, x):
@@ -56,7 +56,7 @@ class STFTDiscriminator(nn.Module):
         )
 
         spec = spec[:, 1:]
-        spec = torch.view_as_real(spec).permute(0, 3, 1, 2)
+        spec = torch.view_as_real(spec).permute(0, 3, 2, 1)
 
         feature_map = []
         for i in range(len(self.net)):
@@ -96,4 +96,4 @@ class MultiScaleDiscriminator(nn.Module):
         stft_features = self.stft_disc(x)
         wave_features = self.wave_disc(x)
 
-        return stft_features + list(wave_features)
+        return [stft_features] + wave_features
