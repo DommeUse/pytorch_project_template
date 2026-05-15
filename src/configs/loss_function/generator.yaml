@@ -1,6 +1,6 @@
 _target_: src.loss.GeneratorLoss
 sample_rate: 16000
-lambda_adv: 1.0
-lambda_feat: 40.0
-lambda_rec: 2.0
+lambda_adv: 0.5
+lambda_feat: 25.0
+lambda_rec: 4.0
 lambda_commit: 1.0
