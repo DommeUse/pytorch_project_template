@@ -53,7 +53,7 @@ class ResidualUnit(nn.Module):
                 dilation = dilation
             ),
             nn.ELU(),
-            CausalConv1d(
+            nn.Conv1d(
                 in_channels = n_channels,
                 out_channels = n_channels,
                 kernel_size = 1
