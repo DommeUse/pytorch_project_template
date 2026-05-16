@@ -86,9 +86,9 @@
 ## Установка
 
 ```bash
-git clone -b soundstream-gan https://github.com/DommeUse/pytorch_project_template.git
+git clone -b soundstream-gan-extra https://github.com/DommeUse/pytorch_project_template.git
 cd pytorch_project_template
-git checkout soundstream-gan
+git checkout soundstream-gan-extra
 
 # создать виртуальное окружение (опционально)
 python3 -m venv venv && source venv/bin/activate
@@ -151,7 +151,7 @@ PYTHONPATH=. python train.py \
 
 ```python
 # В первой ячейке ноутбука:
-!git clone -b soundstream-gan https://github.com/DommeUse/pytorch_project_template.git
+!git clone -b soundstream-gan-extra https://github.com/DommeUse/pytorch_project_template.git
 %cd pytorch_project_template
 !pip install -r requirements.txt
 
@@ -186,7 +186,7 @@ os.environ["COMET_API_KEY"] = user_secrets.get_secret("COMET_API_KEY")
 
 ```python
 # В первой ячейке ноутбука:
-!git clone -b soundstream-gan https://github.com/DommeUse/pytorch_project_template.git
+!git clone -b soundstream-gan-extra https://github.com/DommeUse/pytorch_project_template.git
 %cd pytorch_project_template
 !pip install -r requirements.txt
 
